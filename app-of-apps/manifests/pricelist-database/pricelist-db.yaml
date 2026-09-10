@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: mysql
+    tier: database
+  name: pricelist-database-mysql-primary
+  namespace: pricelist
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+      tier: database
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mysql
+        tier: database
+    spec:
+      serviceAccountName: pricelist-db
+      containers:
+      - image: mysql:8.0
+        name: mysql
+        args:
+        - --default-authentication-plugin=mysql_native_password
+        env:
+        - name: MYSQL_DATABASE
+          value: pricelist
+        - name: MYSQL_PASSWORD
+          value: pricelist
+        - name: MYSQL_USER
+          value: pricelist
+        - name: MYSQL_RANDOM_ROOT_PASSWORD
+          value: "yes"
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: mysql-db
+        livenessProbe:
+          tcpSocket:
+            port: 3306
+          initialDelaySeconds: 12
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 3306
+          initialDelaySeconds: 12
+          periodSeconds: 10
+      volumes:
+      - name: mysql-db
+        persistentVolumeClaim:
+          claimName: pricelist-db-pvc
